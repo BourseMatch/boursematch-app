@@ -1,0 +1,86 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+
+}
+
+// Utilisateur (authentification et informations de base)
+model User {
+  id            String   @id @default(cuid())
+  email         String   @unique
+  password      String   // hashé plus tard
+  name          String?
+  role          String   @default("user") // "user", "admin"
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  academicProfile AcademicProfile? // relation 1-1 optionnelle
+  applications    Application[]
+}
+
+// Profil académique détaillé de l'étudiant
+model AcademicProfile {
+  id              String   @id @default(cuid())
+  userId          String   @unique
+  user            User     @relation(fields: [userId], references: [id])
+
+  // Données académiques
+  country         String   // pays d'origine
+  currentLevel    String   // "Bachelor", "Master", "PhD"
+  fieldOfStudy    String   // ex: "Informatique", "Génie civil"
+  averageGrade    Float    // note moyenne sur 20 (ou autre système)
+  englishLevel    String   // "A1", "B2", "C1", etc.
+  budget          Float?   // budget annuel en USD
+  targetCountries String[] // liste de pays cibles (ex: ["France", "Canada"])
+
+  // Préférences de bourse
+  fundingType     String?  // "Fully Funded", "Partial", "Tuition only"
+  deadlineSoon    Boolean? // priorité aux deadlines proches
+
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+}
+
+// Bourse
+model Scholarship {
+  id              String   @id @default(cuid())
+  title           String
+  country         String
+  university      String?
+  degreeLevel     String   // "Bachelor", "Master", "PhD"
+  field           String?  // domaine principal
+  fundingType     String   // "Fully Funded", "Partial", etc.
+  amount          Float?   // montant en USD
+  deadline        DateTime
+  description     String?  // texte long
+  officialLink    String?  // URL officielle
+  minGrade        Float?   // note minimale requise
+  englishRequired String?  // "B2", "C1", etc.
+  tags            String[] // mots-clés
+
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  applications    Application[]
+}
+
+// Candidature d'un utilisateur à une bourse
+model Application {
+  id              String   @id @default(cuid())
+  userId          String
+  scholarshipId   String
+  status          String   @default("draft") // draft, submitted, accepted, rejected
+  score           Float?   // score de matching calculé par l'IA
+  feedback        String?  // commentaire IA sur la candidature
+  submittedAt     DateTime?
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  user            User        @relation(fields: [userId], references: [id])
+  scholarship     Scholarship @relation(fields: [scholarshipId], references: [id])
+
+  @@unique([userId, scholarshipId]) // éviter les doublons
+}
